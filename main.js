@@ -1,236 +1,164 @@
-// Data contoh untuk analisis
-const sampleData = {
-    "length_url": 132,
-    "length_hostname": 34,
-    "ip": 0,
-    "nb_dots": 5,
-    "nb_hyphens": 3,
-    "nb_slash": 7,
-    "nb_at": 0,
-    "nb_qm": 2,
-    "nb_and": 4,
-    "nb_eq": 3,
-    "nb_underscore": 2,
-    "nb_tilde": 0,
-    "nb_percent": 1,
-    "nb_colon": 1,
-    "nb_semicolumn": 1,
-    "nb_www": 0,
-    "nb_com": 1,
-    "nb_dslash": 2,
-    "http_in_path": 1,
-    "https_token": 1,
-    "ratio_digits_url": 0.23
-};
+function extractFeatures(urlString) {
+    try {
+        const urlObj = new URL(urlString);
+        const fullUrl = urlObj.href;
+        const hostname = urlObj.hostname;
 
-// Mengambil URL tab aktif saat halaman dimuat
-document.addEventListener('DOMContentLoaded', () => {
+        const count = (str, char) => (str.match(new RegExp(`\\${char}`, "g")) || []).length;
+
+        const isIpAddress = (str) => {
+            const ipPattern =
+                /^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
+            return ipPattern.test(str) ? 1 : 0;
+        };
+
+        const digitCount = (fullUrl.match(/\d/g) || []).length;
+
+        return {
+            length_url: fullUrl.length,
+            length_hostname: hostname.length,
+            ip: isIpAddress(hostname),
+            nb_dots: count(fullUrl, "."),
+            nb_hyphens: count(fullUrl, "-"),
+            nb_slash: count(fullUrl, "/"),
+            nb_at: count(fullUrl, "@"),
+            nb_qm: count(fullUrl, "?"),
+            nb_and: count(fullUrl, "&"),
+            nb_eq: count(fullUrl, "="),
+            nb_underscore: count(fullUrl, "_"),
+            nb_tilde: count(fullUrl, "~"),
+            nb_percent: count(fullUrl, "%"),
+            nb_colon: count(fullUrl, ":"),
+            nb_semicolumn: count(fullUrl, ";"),
+            nb_www: fullUrl.includes("www") ? 1 : 0,
+            nb_com: fullUrl.includes(".com") ? 1 : 0,
+            nb_dslash: fullUrl.includes("//") ? 1 : 0,
+            http_in_path: urlObj.pathname.includes("http") ? 1 : 0,
+            https_token: urlObj.protocol === "https:" ? 1 : 0,
+            ratio_digits_url: Number((digitCount / fullUrl.length).toFixed(2)),
+        };
+    } catch (err) {
+        console.error("Invalid URL:", err);
+        return null;
+    }
+}
+
+
+function displayAnalysisDetails(features) {
+    const detailsGrid = document.getElementById("detailsGrid");
+    if (!detailsGrid) return;
+
+    detailsGrid.innerHTML = "";
+
+    const labels = {
+        length_url: "Panjang URL",
+        length_hostname: "Panjang Hostname",
+        ip: "Mengandung IP",
+        nb_dots: "Jumlah Titik",
+        nb_hyphens: "Jumlah Hyphen",
+        nb_slash: "Jumlah Slash",
+        nb_at: "Jumlah @",
+        nb_qm: "Jumlah ?",
+        nb_and: "Jumlah &",
+        nb_eq: "Jumlah =",
+        nb_underscore: "Jumlah _",
+        nb_tilde: "Jumlah ~",
+        nb_percent: "Jumlah %",
+        nb_colon: "Jumlah :",
+        nb_semicolumn: "Jumlah ;",
+        nb_www: "Mengandung www",
+        nb_com: "Mengandung .com",
+        nb_dslash: "Double Slash",
+        http_in_path: "HTTP di Path",
+        https_token: "HTTPS",
+        ratio_digits_url: "Rasio Digit",
+    };
+
+    Object.entries(features).forEach(([key, value]) => {
+        const div = document.createElement("div");
+        div.className = "detail-item";
+
+        div.innerHTML = `
+            <span>${labels[key] || key}</span>
+            <strong>${value}</strong>
+        `;
+
+        detailsGrid.appendChild(div);
+    });
+}
+
+document.addEventListener("DOMContentLoaded", () => {
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-        if (tabs[0]) {
+        if (tabs?.length && tabs[0].url) {
             document.getElementById("urlInput").value = tabs[0].url;
         }
     });
 });
 
-// Fungsi untuk menentukan risiko berdasarkan nilai
-function getRiskLevel(value, featureName) {
-    // Logika sederhana untuk menentukan risiko
-    const riskRules = {
-        'length_url': value > 100 ? 'high' : 'low',
-        'length_hostname': value > 30 ? 'high' : 'low',
-        'ip': value === 1 ? 'high' : 'low',
-        'nb_dots': value > 4 ? 'high' : 'low',
-        'nb_hyphens': value > 2 ? 'high' : 'low',
-        'nb_slash': value > 5 ? 'high' : 'low',
-        'nb_at': value > 0 ? 'high' : 'low',
-        'nb_qm': value > 1 ? 'high' : 'low',
-        'nb_and': value > 3 ? 'high' : 'low',
-        'nb_eq': value > 2 ? 'high' : 'low',
-        'nb_underscore': value > 1 ? 'high' : 'low',
-        'nb_percent': value > 0 ? 'high' : 'low',
-        'nb_colon': value > 1 ? 'high' : 'low',
-        'nb_semicolumn': value > 0 ? 'high' : 'low',
-        'nb_www': value === 0 ? 'high' : 'low',
-        'nb_com': value > 1 ? 'high' : 'low',
-        'nb_dslash': value > 1 ? 'high' : 'low',
-        'http_in_path': value === 1 ? 'high' : 'low',
-        'https_token': value === 0 ? 'high' : 'low',
-        'ratio_digits_url': value > 0.15 ? 'high' : 'low'
-    };
-
-    return riskRules[featureName] || 'medium';
-}
-
-// Fungsi untuk menampilkan detail analisis
-function displayAnalysisDetails(data) {
-    const detailsGrid = document.getElementById('detailsGrid');
-    detailsGrid.innerHTML = '';
-
-    // Mapping nama fitur yang lebih deskriptif
-    const featureNames = {
-        'length_url': 'Panjang URL',
-        'length_hostname': 'Panjang Hostname',
-        'ip': 'Mengandung IP',
-        'nb_dots': 'Jumlah Titik',
-        'nb_hyphens': 'Jumlah Hyphen',
-        'nb_slash': 'Jumlah Slash',
-        'nb_at': 'Jumlah Simbol @',
-        'nb_qm': 'Jumlah Tanda Tanya',
-        'nb_and': 'Jumlah Simbol &',
-        'nb_eq': 'Jumlah Simbol =',
-        'nb_underscore': 'Jumlah Underscore',
-        'nb_tilde': 'Jumlah Tilde',
-        'nb_percent': 'Jumlah Persen',
-        'nb_colon': 'Jumlah Titik Dua',
-        'nb_semicolumn': 'Jumlah Titik Koma',
-        'nb_www': 'Mengandung www',
-        'nb_com': 'Jumlah .com',
-        'nb_dslash': 'Jumlah Double Slash',
-        'http_in_path': 'HTTP dalam Path',
-        'https_token': 'Token HTTPS',
-        'ratio_digits_url': 'Rasio Digit dalam URL'
-    };
-
-    // Tampilkan setiap fitur
-    for (const [key, value] of Object.entries(data)) {
-        const riskLevel = getRiskLevel(value, key);
-
-        const detailItem = document.createElement('div');
-        detailItem.className = 'detail-item';
-
-        detailItem.innerHTML = `
-            <div class="detail-label">${featureNames[key] || key}</div>
-            <div class="detail-value ${riskLevel === 'high' ? 'high-risk' : 'low-risk'}">${value}</div>
-        `;
-
-        detailsGrid.appendChild(detailItem);
-    }
-}
-
-// Klik tombol check
 document.getElementById("checkBtn").addEventListener("click", async () => {
     const url = document.getElementById("urlInput").value;
     const resultDiv = document.getElementById("result");
-    const analysisDetails = document.getElementById("analysisDetails");
-    const viewDetailsBtn = document.getElementById("viewDetailsBtn");
+    const viewBtn = document.getElementById("viewDetailsBtn");
     const closeBtn = document.getElementById("closeBtn");
 
-    resultDiv.textContent = "";
-    resultDiv.className = "";
     resultDiv.classList.remove("hidden");
+    resultDiv.innerHTML = "Memeriksa URL...";
+    viewBtn.classList.add("hidden");
+    closeBtn.classList.add("hidden");
 
-    resultDiv.innerHTML = `
-        <div style="font-size: 18px; margin-bottom: 10px;">⏳</div>
-        <div style="font-size: 16px;">Memeriksa URL...</div>
-    `;
+    const features = extractFeatures(url);
+    if (!features) {
+        resultDiv.innerHTML = "❌ URL tidak valid";
+        return;
+    }
+    console.log(features);
+
 
     try {
-        const response = await fetch("http://127.0.0.1:5000/predict", {
+        const res = await fetch("http://127.0.0.1:5000/predict", {
             method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({ url: url })
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(features),
         });
 
-        const data = await response.json();
+        if (!res.ok) throw new Error("Server error");
 
-        if (data.status === "phishing") {
+        const data = await res.json();
+
+        if (data.label === "phishing") {
             resultDiv.innerHTML = `
-                <div class="warning-header">
-                    <div class="warning-icon">⚠️</div>
-                    <div style="font-size: 18px; font-weight: 600;">PERINGATAN: Situs Phishing Terdeteksi!</div>
-                </div>
-                <div class="confidence">${data.confidence || 94}%</div>
-                <div class="message">Model XGBoost mengidentifikasi situs ini sebagai phishing dengan tingkat kepercayaan ${data.confidence || 94}%. Hindari memasukkan informasi pribadi.</div>
-            `;
-            resultDiv.className = "phishing";
+                            <div class="warning-header">
+                                <div class="warning-icon">⚠️</div>
+                                <div style="font-size: 18px; font-weight: 600; color:red;">SITUS PHISING TERDETEKSI!</div>
+                            </div>
+                            
+                            <div class="message">Model XGBoost mengidentifikasi situs ini sebagai phishing. Hindari memasukkan informasi pribadi.</div>
+                        `;
         } else {
             resultDiv.innerHTML = `
-                <div class="warning-header">
-                    <div class="warning-icon">✅</div>
-                    <div style="font-size: 18px; font-weight: 600;">Situs Aman Terdeteksi</div>
-                </div>
-                <div class="confidence">${data.confidence || 12}%</div>
-                <div class="message">Model XGBoost mengidentifikasi situs ini sebagai aman dengan tingkat kepercayaan ${data.confidence || 12}%.</div>
-            `;
-            resultDiv.className = "safe";
+                            <div class="warning-header">
+                                <div class="warning-icon">✅</div>
+                                <div style="font-size: 18px; font-weight: 600;">Situs Aman Terdeteksi</div>
+                            </div>
+                            <div class="message">Model XGBoost mengidentifikasi situs ini sebagai aman.</div>
+                        `;
         }
 
-        if (data.features) {
-            displayAnalysisDetails(data.features);
-        } else {
-            displayAnalysisDetails(sampleData); 
-        }
-
-        // setTimeout(() => {
-        //     // Simulasi hasil phishing (94% confidence)
-        //     const isPhishing = Math.random() > 0.5; // 50% kemungkinan phishing
-        //     const confidence = isPhishing ? 94 : 12;
-
-        //     // Tampilkan hasil
-        //     if (isPhishing) {
-        //         resultDiv.innerHTML = `
-        //             <div class="warning-header">
-        //                 <div class="warning-icon">⚠️</div>
-        //                 <div style="font-size: 18px; font-weight: 600;">PERINGATAN: Situs Phishing Terdeteksi!</div>
-        //             </div>
-        //             <div class="confidence">${confidence}%</div>
-        //             <div class="message">Model XGBoost mengidentifikasi situs ini sebagai phishing dengan tingkat kepercayaan ${confidence}%. Hindari memasukkan informasi pribadi.</div>
-        //         `;
-        //         resultDiv.className = "phishing";
-        //     } else {
-        //         resultDiv.innerHTML = `
-        //             <div class="warning-header">
-        //                 <div class="warning-icon">✅</div>
-        //                 <div style="font-size: 18px; font-weight: 600;">Situs Aman Terdeteksi</div>
-        //             </div>
-        //             <div class="confidence">${confidence}%</div>
-        //             <div class="message">Model XGBoost mengidentifikasi situs ini sebagai aman dengan tingkat kepercayaan ${confidence}%.</div>
-        //         `;
-        //         resultDiv.className = "safe";
-        //     }
-
-        //     // Tampilkan detail analisis
-        //     displayAnalysisDetails(sampleData);
-
-        //     // Tampilkan tombol
-        //     viewDetailsBtn.classList.remove("hidden");
-        //     closeBtn.classList.remove("hidden");
-        //     viewDetailsBtn.textContent = "Lihat Detail";
-        //     analysisDetails.classList.add("hidden");
-
-        //     // Reset scroll ke atas
-        //     document.body.scrollTop = 0;
-        // }, 1000); // Simulasi delay jaringan
-
-    } catch (error) {
-        console.error("Error:", error);
-        resultDiv.innerHTML = `
-            <div style="font-size: 18px; margin-bottom: 10px;">❌</div>
-            <div style="font-size: 16px;">Error connecting to API</div>
-            <div style="font-size: 12px; margin-top: 10px; color: #a0a0c0;">${error.message}</div>
-        `;
+        displayAnalysisDetails(features);
+        viewBtn.classList.remove("hidden");
+        closeBtn.classList.remove("hidden");
+    } catch (err) {
+        console.error(err);
+        resultDiv.innerHTML = "Gagal terhubung ke server";
     }
 });
 
-// Tombol lihat detail
 document.getElementById("viewDetailsBtn").addEventListener("click", () => {
-    const analysisDetails = document.getElementById("analysisDetails");
-    analysisDetails.classList.toggle("hidden");
-
-    // Update teks tombol
-    const btn = document.getElementById("viewDetailsBtn");
-    if (analysisDetails.classList.contains("hidden")) {
-        btn.textContent = "Lihat Detail";
-    } else {
-        btn.textContent = "Sembunyikan Detail";
-    }
+    const details = document.getElementById("analysisDetails");
+    details.classList.toggle("hidden");
 });
 
-// Tombol tutup
 document.getElementById("closeBtn").addEventListener("click", () => {
-    // Reset tampilan
     document.getElementById("result").classList.add("hidden");
     document.getElementById("analysisDetails").classList.add("hidden");
     document.getElementById("viewDetailsBtn").classList.add("hidden");
