@@ -1,11 +1,35 @@
 {
   "manifest_version": 3,
-  "name": "BaitBlock",
-  "description": "Deteksi URL phishing berbasis AI",
+  "name": "BaitBlock - Phishing Detector",
   "version": "1.0",
-  "permissions": ["tabs"],
+  "description": "Deteksi situs phishing menggunakan Machine Learning",
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "tabs"
+  ],
+  "host_permissions": [
+    "http://127.0.0.1:5000/*",
+    "https://*/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_end"
+    }
+  ],
   "action": {
-    "default_popup": "index.html",
-    "default_icon": "Logo.png"
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "Logo.png",
+      "48": "Logo.png",
+      "128": "Logo.png"
+    }
+  },
+  "icons": {
+    "16": "Logo.png",
+    "48": "Logo.png",
+    "128": "Logo.png"
   }
 }

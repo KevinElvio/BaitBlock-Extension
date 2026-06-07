@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BaitBlock - Phishing Detector</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <div class="logo">
+        <img src="./Logo.png" alt="BaitBlock Logo" class="logo-icon">
+        <span class="logo-text">BaitBlock</span>
+      </div>
+      <p class="tagline">Deteksi Phishing Cerdas</p>
+    </header>
+
+    <main class="main-content">
+      <div class="input-group">
+        <label for="urlInput">URL yang akan dicek:</label>
+        <input type="text" id="urlInput" placeholder="Memuat URL..." readonly>
+      </div>
+
+      <button id="checkBtn" class="check-btn">
+        <span class="btn-text">Cek Keamanan</span>
+        <span class="btn-icon">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+            <path d="M10 2L10 10M10 10L6 14M10 10L14 14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </span>
+      </button>
+
+      <div id="loading" class="loading hidden">
+        <div class="spinner"></div>
+        <p id="loadingText">Menganalisis...</p>
+      </div>
+
+      <div id="result" class="result hidden"></div>
+
+      <div id="details" class="details hidden">
+        <button id="toggleDetails" class="toggle-btn">
+          <span>Lihat Detail Analisis</span>
+          <span class="toggle-icon">▼</span>
+        </button>
+        <div id="detailsContent" class="details-content hidden">
+          <div class="detail-section">
+            <h4>Informasi URL</h4>
+            <div id="urlInfo" class="detail-grid"></div>
+          </div>
+          <div class="detail-section">
+            <h4>Fitur Keamanan</h4>
+            <div id="securityFeatures" class="detail-grid"></div>
+          </div>
+          <div class="detail-section">
+            <h4>Informasi Third-Party</h4>
+            <div id="thirdPartyFeatures" class="detail-grid"></div>
+          </div>
+          <div class="detail-section">
+            <h4>Indikator Risiko</h4>
+            <div id="riskIndicators" class="detail-list"></div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <footer class="footer">
+      <p>BaitBlock v1.0 • Powered by XGBoost ML</p>
+    </footer>
+  </div>
+
+  <script src="apiService.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>
